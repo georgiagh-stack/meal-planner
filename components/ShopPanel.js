@@ -1,6 +1,6 @@
 "use client";
 
-const SECTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Staples", "Extras"];
+const SECTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Staples"];
 
 function Spinner() {
   return (
@@ -9,11 +9,13 @@ function Spinner() {
 }
 
 export default function ShopPanel({ items, onDismiss }) {
-  const processed = items.filter((i) => i.status !== "pending");
-  const successCount = items.filter((i) => i.status === "success").length;
-  const errorItems = items.filter((i) => i.status === "error");
-  const isDone = items.length > 0 && processed.length === items.length;
-  const pct = Math.round((processed.length / items.length) * 100);
+  const shopItems = items.filter((i) => i.status !== "pantry");
+  const pantryItems = items.filter((i) => i.status === "pantry");
+  const processed = shopItems.filter((i) => i.status !== "pending");
+  const successCount = shopItems.filter((i) => i.status === "success").length;
+  const errorItems = shopItems.filter((i) => i.status === "error");
+  const isDone = shopItems.length > 0 && processed.length === shopItems.length;
+  const pct = Math.round((processed.length / shopItems.length) * 100);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in">
@@ -39,7 +41,7 @@ export default function ShopPanel({ items, onDismiss }) {
               ? errorItems.length === 0
                 ? `All ${successCount} items added to your trolley`
                 : `${successCount} added · ${errorItems.length} need manual adding`
-              : `${processed.length} of ${items.length} items added`}
+              : `${processed.length} of ${shopItems.length} items added`}
           </p>
         </div>
 
@@ -54,7 +56,7 @@ export default function ShopPanel({ items, onDismiss }) {
         {/* Items list, grouped by section */}
         <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
           {SECTIONS.map((section) => {
-            const sectionItems = items.filter((i) => i.section === section);
+            const sectionItems = shopItems.filter((i) => i.section === section);
             if (sectionItems.length === 0) return null;
             return (
               <div key={section}>
@@ -91,6 +93,23 @@ export default function ShopPanel({ items, onDismiss }) {
               </div>
             );
           })}
+
+          {/* Pantry section — assumed in stock, not ordered */}
+          {pantryItems.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2.5">
+                🏠 Pantry (not ordered)
+              </p>
+              <ul className="space-y-2">
+                {pantryItems.map((item, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <span className="text-sm leading-none flex-shrink-0">🏠</span>
+                    <p className="text-sm text-stone-400 line-through">{item.text}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Footer — shown only when done */}

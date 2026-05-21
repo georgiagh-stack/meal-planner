@@ -19,6 +19,12 @@ Requirements:
 - Varied cuisines across the week
 - No meal should repeat from a common rotation — be creative
 
+Ingredient overlap (important):
+- Actively choose meals that share fresh ingredients across the week. For example, if two meals can both use cherry tomatoes, spinach, or the same protein, prefer those combinations.
+- Aim for at least 3–4 fresh ingredients to appear in more than one meal.
+- Think of it as shopping once and using everything up — reduce waste, reduce the trolley size.
+- Stock cupboard staples (salt, pepper, olive oil, honey, soy sauce) are always available and do not count toward unique ingredients — include them freely in recipes but don't worry about repeating them.
+
 Return ONLY valid JSON in this exact structure, no other text:
 {
   "weekOf": "a week date range string like '25–29 May 2026'",

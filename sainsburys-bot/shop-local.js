@@ -68,25 +68,22 @@ async function main() {
     const page = await context.newPage();
     await page.goto("https://www.sainsburys.co.uk", { waitUntil: "domcontentloaded" });
 
-    // Check if already logged in (session file worked)
-    const loggedIn = await page.locator(
-      '[data-testid="header-my-account"], [aria-label*="My account"], a[href*="my-account"]'
-    ).count() > 0;
-
-    if (!loggedIn) {
-      console.log("=".repeat(60));
+    const sessionExists = fs.existsSync(SESSION_FILE);
+    console.log("=".repeat(60));
+    if (sessionExists) {
+      console.log("Browser opened with your saved session.");
+      console.log("If you're already logged in, just press Enter.");
+      console.log("If not, sign in first then press Enter.");
+    } else {
       console.log("Please sign in to Sainsbury's in the browser window.");
       console.log("Come back here and press Enter once you're logged in.");
-      console.log("(You'll only need to do this once — session will be saved.)");
-      console.log("=".repeat(60));
-      await waitForEnter("\nPress Enter when you're logged in > ");
-
-      // Save session so next run skips login
-      await context.storageState({ path: SESSION_FILE });
-      console.log("Session saved — you won't need to log in next time.\n");
-    } else {
-      console.log("Already logged in (using saved session).\n");
+      console.log("(Session will be saved so you won't need to do this again.)");
     }
+    console.log("=".repeat(60));
+    await waitForEnter("\nPress Enter to start adding items > ");
+
+    // Save/refresh session after every successful login
+    await context.storageState({ path: SESSION_FILE });
 
     console.log("\nStarting to add items...\n");
 
@@ -94,6 +91,10 @@ async function main() {
 
     for (let i = 0; i < run.items.length; i++) {
       const item = run.items[i];
+      if (item.status === "pantry") {
+        process.stdout.write(`[skip] ${item.text} (pantry)\n`);
+        continue;
+      }
       process.stdout.write(`[${i + 1}/${run.items.length}] ${item.text} ... `);
       const result = await addItemToTrolley(page, item.text);
       updatedItems[i] = { ...item, status: result.success ? "success" : "error", error: result.error };

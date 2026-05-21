@@ -4,6 +4,7 @@ import { useExtras } from "@/hooks/useExtras";
 import ShopPanel from "@/components/ShopPanel";
 import WeeklyExtras from "@/components/WeeklyExtras";
 import { supabase } from "@/lib/supabase";
+import { isPantryItem } from "@/lib/pantry";
 
 const DAY_STYLES = {
   Monday:    { badge: "bg-sky-100 text-sky-700" },
@@ -182,7 +183,11 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
 
     const allItems = [
       ...meals.flatMap((m) =>
-        m.ingredients.map((ing) => ({ text: ing, status: "pending", section: m.day }))
+        m.ingredients.map((ing) => ({
+          text: ing,
+          status: isPantryItem(ing) ? "pantry" : "pending",
+          section: m.day,
+        }))
       ),
       ...extras.map((e) => ({ text: e.text, status: "pending", section: "Staples" })),
     ];
