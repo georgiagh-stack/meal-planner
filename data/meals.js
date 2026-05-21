@@ -17,6 +17,7 @@ export const meals = [
     day: "Monday",
     name: "Teriyaki Salmon with Edamame Rice",
     time: "25 min",
+    calories: 580,
     emoji: "🐟",
     ingredients: [
       "4 salmon fillets (approx 130g each)",
@@ -44,6 +45,7 @@ export const meals = [
     day: "Tuesday",
     name: "Chicken & Chickpea Harissa Traybake",
     time: "35 min",
+    calories: 650,
     emoji: "🍗",
     ingredients: [
       "8 chicken thighs, bone-in skin-on",
@@ -71,6 +73,7 @@ export const meals = [
     day: "Wednesday",
     name: "Lemon & Herb Baked Cod with Roasted Peppers & Quinoa",
     time: "25 min",
+    calories: 450,
     emoji: "🐠",
     ingredients: [
       "4 cod fillets (approx 150g each)",
@@ -100,6 +103,7 @@ export const meals = [
     day: "Thursday",
     name: "Greek Turkey Meatballs with Tzatziki & Flatbread",
     time: "25 min",
+    calories: 520,
     emoji: "🥙",
     ingredients: [
       "500g turkey mince",
@@ -130,6 +134,7 @@ export const meals = [
     day: "Friday",
     name: "Prawn & Coconut Thai Green Curry",
     time: "20 min",
+    calories: 480,
     emoji: "🍤",
     ingredients: [
       "400g raw king prawns, peeled",

@@ -306,6 +306,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
                       {meal.day}
                     </span>
                     <span className="text-xs text-stone-400">⏱ {meal.time}</span>
+                    {meal.calories && <span className="text-xs text-stone-400">· {meal.calories} kcal</span>}
                   </div>
                   <h2 className="text-stone-900 font-semibold text-[15px] leading-snug">{meal.name}</h2>
                 </div>

@@ -35,6 +35,7 @@ Return ONLY valid JSON in this exact structure, no other text:
       "day": "Monday",
       "name": "Meal Name",
       "time": "25 min",
+      "calories": 520,
       "emoji": "🍗",
       "ingredients": ["ingredient 1", "ingredient 2"],
       "method": ["Step 1 description.", "Step 2 description."],
@@ -44,7 +45,8 @@ Return ONLY valid JSON in this exact structure, no other text:
 }
 
 Days must be exactly: Monday, Tuesday, Wednesday, Thursday, Friday.
-Each meal needs 8–12 ingredients and 5–7 method steps.`;
+Each meal needs 8–12 ingredients and 5–7 method steps.
+calories should be an integer — estimated kcal per serving (1 serving = half the recipe).`;
 
   try {
     const message = await client.messages.create({
