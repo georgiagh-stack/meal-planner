@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
+import { useExtras } from "@/hooks/useExtras";
+import ShopPanel from "@/components/ShopPanel";
+import WeeklyExtras from "@/components/WeeklyExtras";
 
 const DAY_STYLES = {
-  Monday:    { badge: "bg-sky-100 text-sky-700",     dot: "bg-sky-400" },
-  Tuesday:   { badge: "bg-orange-100 text-orange-700", dot: "bg-orange-400" },
-  Wednesday: { badge: "bg-teal-100 text-teal-700",   dot: "bg-teal-400" },
-  Thursday:  { badge: "bg-violet-100 text-violet-700", dot: "bg-violet-400" },
-  Friday:    { badge: "bg-rose-100 text-rose-700",   dot: "bg-rose-400" },
+  Monday:    { badge: "bg-sky-100 text-sky-700" },
+  Tuesday:   { badge: "bg-orange-100 text-orange-700" },
+  Wednesday: { badge: "bg-teal-100 text-teal-700" },
+  Thursday:  { badge: "bg-violet-100 text-violet-700" },
+  Friday:    { badge: "bg-rose-100 text-rose-700" },
 };
 
 function CheckIcon() {
@@ -28,7 +31,7 @@ function CloseIcon() {
 
 function SparkleIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
       <path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75z" />
     </svg>
@@ -37,7 +40,7 @@ function SparkleIcon() {
 
 function CartIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="9" cy="21" r="1" />
       <circle cx="20" cy="21" r="1" />
       <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
@@ -45,22 +48,26 @@ function CartIcon() {
   );
 }
 
+// ─── Sainsbury's automation placeholder ───────────────────────────────────────
+// TODO: Replace with a real call to /api/sainsburys/add when browser automation
+// is wired up. Should return { success: boolean }.
+async function addItemToSainsburys(_itemText) {
+  await new Promise((resolve) => setTimeout(resolve, 45));
+  return { success: true };
+}
+// ──────────────────────────────────────────────────────────────────────────────
+
 function RecipeModal({ meal, checkedMap, onToggle, onClose }) {
-  const styles = DAY_STYLES[meal.day];
+  const styles = DAY_STYLES[meal.day] || { badge: "bg-stone-100 text-stone-600" };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center animate-fade-in">
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white w-full sm:max-w-lg sm:rounded-3xl rounded-t-3xl max-h-[92vh] overflow-y-auto shadow-2xl animate-slide-up sm:animate-none">
-        {/* Drag handle (mobile only) */}
         <div className="flex justify-center pt-3 pb-1 sm:hidden">
           <div className="w-10 h-1 bg-stone-200 rounded-full" />
         </div>
 
-        {/* Sticky header */}
         <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-stone-100 px-6 py-4 flex items-start justify-between">
           <div>
             <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full ${styles.badge}`}>
@@ -79,7 +86,6 @@ function RecipeModal({ meal, checkedMap, onToggle, onClose }) {
         </div>
 
         <div className="px-6 py-5 space-y-7">
-          {/* Ingredients */}
           <section>
             <h3 className="text-stone-900 font-semibold text-base mb-3">Ingredients</h3>
             <ul className="space-y-2.5">
@@ -92,15 +98,11 @@ function RecipeModal({ meal, checkedMap, onToggle, onClose }) {
                     onClick={() => onToggle(i)}
                   >
                     <span className={`checkbox-inner mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      checked
-                        ? "bg-emerald-500 border-emerald-500"
-                        : "border-stone-300 hover:border-emerald-400"
+                      checked ? "bg-emerald-500 border-emerald-500" : "border-stone-300 hover:border-emerald-400"
                     }`}>
                       {checked && <CheckIcon />}
                     </span>
-                    <span className={`text-sm leading-relaxed ${
-                      checked ? "line-through text-stone-400" : "text-stone-700"
-                    }`}>
+                    <span className={`text-sm leading-relaxed ${checked ? "line-through text-stone-400" : "text-stone-700"}`}>
                       {ing}
                     </span>
                   </li>
@@ -109,7 +111,6 @@ function RecipeModal({ meal, checkedMap, onToggle, onClose }) {
             </ul>
           </section>
 
-          {/* Method */}
           <section>
             <h3 className="text-stone-900 font-semibold text-base mb-3">Method</h3>
             <ol className="space-y-3.5">
@@ -124,7 +125,6 @@ function RecipeModal({ meal, checkedMap, onToggle, onClose }) {
             </ol>
           </section>
 
-          {/* Chef's tip */}
           <section className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
             <p className="text-amber-900 font-semibold text-sm mb-1">Chef's tip</p>
             <p className="text-amber-800 text-sm leading-relaxed">{meal.tip}</p>
@@ -142,18 +142,17 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
   const [staples] = useState(initialStaples);
   const [weekOf, setWeekOf] = useState(initialWeekOf);
   const [selectedMeal, setSelectedMeal] = useState(null);
-  // checkedIngredients: { [mealId]: { [ingredientIndex]: boolean } }
   const [checkedIngredients, setCheckedIngredients] = useState({});
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenError, setRegenError] = useState(null);
+  const [shopItems, setShopItems] = useState(null);
+
+  const { extras, loading: extrasLoading, configured: extrasConfigured, addExtra, removeExtra } = useExtras();
 
   const toggleIngredient = (mealId, idx) => {
     setCheckedIngredients((prev) => ({
       ...prev,
-      [mealId]: {
-        ...(prev[mealId] || {}),
-        [idx]: !(prev[mealId]?.[idx] || false),
-      },
+      [mealId]: { ...(prev[mealId] || {}), [idx]: !(prev[mealId]?.[idx] || false) },
     }));
   };
 
@@ -175,21 +174,30 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
     }
   };
 
-  // Placeholder — wire up browser automation here later
-  const handleStartShop = () => {
+  const handleStartShop = async () => {
     const allItems = [
-      ...meals.flatMap((m) => m.ingredients),
-      ...staples,
+      ...meals.flatMap((m) =>
+        m.ingredients.map((ing) => ({ text: ing, status: "pending", section: m.day }))
+      ),
+      ...staples.map((s) => ({ text: s, status: "pending", section: "Staples" })),
+      ...extras.map((e) => ({ text: e.text, status: "pending", section: "Extras" })),
     ];
-    // TODO: Trigger Sainsbury's browser automation with `allItems`
-    alert(
-      `Sainsbury's automation coming soon!\n\nWhen wired up, this will add ${allItems.length} items to your trolley automatically.`
-    );
+
+    setShopItems(allItems);
+
+    for (let i = 0; i < allItems.length; i++) {
+      const result = await addItemToSainsburys(allItems[i].text);
+      setShopItems((prev) => {
+        if (!prev) return null;
+        return prev.map((item, idx) =>
+          idx === i ? { ...item, status: result.success ? "success" : "error" } : item
+        );
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-stone-50 pb-12">
-      {/* Header */}
       <header className="bg-emerald-800 text-white px-5 pt-10 pb-8">
         <div className="max-w-xl mx-auto">
           <p className="text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-2">
@@ -200,8 +208,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
             High protein · Under 30 min · Serves 2 + leftovers
           </p>
 
-          {/* Action buttons */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-wrap gap-3 mt-6">
             <button
               onClick={handleRegenerate}
               disabled={isRegenerating}
@@ -213,7 +220,8 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
 
             <button
               onClick={handleStartShop}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+              disabled={!!shopItems}
+              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
             >
               <CartIcon />
               Start Sainsbury's shop
@@ -228,10 +236,9 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
         </div>
       </header>
 
-      {/* Meal list */}
       <main className="max-w-xl mx-auto px-4 py-5 space-y-3">
         {meals.map((meal) => {
-          const styles = DAY_STYLES[meal.day] || { badge: "bg-stone-100 text-stone-600", dot: "bg-stone-400" };
+          const styles = DAY_STYLES[meal.day] || { badge: "bg-stone-100 text-stone-600" };
           return (
             <button
               key={meal.id}
@@ -246,9 +253,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
                     </span>
                     <span className="text-xs text-stone-400">⏱ {meal.time}</span>
                   </div>
-                  <h2 className="text-stone-900 font-semibold text-[15px] leading-snug">
-                    {meal.name}
-                  </h2>
+                  <h2 className="text-stone-900 font-semibold text-[15px] leading-snug">{meal.name}</h2>
                 </div>
                 <span className="text-2xl flex-shrink-0 mt-0.5">{meal.emoji}</span>
               </div>
@@ -261,10 +266,8 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
         })}
 
         {/* Weekly staples */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 mt-2">
-          <h2 className="font-semibold text-amber-900 text-sm mb-3">
-            🛒 Weekly staples
-          </h2>
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
+          <h2 className="font-semibold text-amber-900 text-sm mb-3">🛒 Weekly staples</h2>
           <div className="grid grid-cols-2 gap-y-2 gap-x-4">
             {staples.map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-amber-800 text-sm">
@@ -274,9 +277,17 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
             ))}
           </div>
         </div>
+
+        {/* Collaborative extras */}
+        <WeeklyExtras
+          extras={extras}
+          loading={extrasLoading}
+          configured={extrasConfigured}
+          onAdd={addExtra}
+          onRemove={removeExtra}
+        />
       </main>
 
-      {/* Recipe modal */}
       {selectedMeal && (
         <RecipeModal
           meal={selectedMeal}
@@ -284,6 +295,10 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
           onToggle={(idx) => toggleIngredient(selectedMeal.id, idx)}
           onClose={() => setSelectedMeal(null)}
         />
+      )}
+
+      {shopItems && (
+        <ShopPanel items={shopItems} onDismiss={() => setShopItems(null)} />
       )}
     </div>
   );
