@@ -217,6 +217,14 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
         { event: "UPDATE", schema: "public", table: "shop_runs", filter: `id=eq.${runId}` },
         (payload) => {
           setShopItems(payload.new.items);
+          // If the run failed, mark any remaining pending items as errored
+          if (payload.new.run_status === "failed") {
+            setShopItems((prev) =>
+              prev ? prev.map((item) =>
+                item.status === "pending" ? { ...item, status: "error" } : item
+              ) : null
+            );
+          }
         }
       )
       .subscribe();
