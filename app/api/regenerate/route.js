@@ -19,11 +19,12 @@ Requirements:
 - Varied cuisines across the week
 - No meal should repeat from a common rotation — be creative
 
-Ingredient overlap (important):
-- Actively choose meals that share fresh ingredients across the week. For example, if two meals can both use cherry tomatoes, spinach, or the same protein, prefer those combinations.
-- Aim for at least 3–4 fresh ingredients to appear in more than one meal.
-- Think of it as shopping once and using everything up — reduce waste, reduce the trolley size.
-- Stock cupboard staples (salt, pepper, olive oil, honey, soy sauce) are always available and do not count toward unique ingredients — include them freely in recipes but don't worry about repeating them.
+Ingredient overlap (this is a hard requirement, not a suggestion):
+- Before picking meals, choose 2–3 "anchor" ingredients that will appear in multiple meals. Good anchors: a protein used twice (e.g., chicken thighs on Monday and Wednesday), a vegetable used in 3 meals (e.g., cherry tomatoes, spinach, or red onion), or a fresh herb used across several dishes (e.g., coriander, parsley).
+- Every anchor ingredient MUST appear in at least 2 of the 5 meals.
+- Do NOT pick 5 meals with completely different proteins — at least one protein should repeat across 2 meals.
+- Think of it as one supermarket shop where nothing goes to waste.
+- Stock cupboard staples (salt, pepper, olive oil, honey, soy sauce) are always available — include them freely but they don't count as anchors.
 
 Return ONLY valid JSON in this exact structure, no other text:
 {
