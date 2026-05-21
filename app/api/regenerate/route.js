@@ -1,8 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient } from "@supabase/supabase-js";
 
 const client = new Anthropic();
 
-export async function POST() {
+export async function POST(request) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json(
       { error: "ANTHROPIC_API_KEY not configured" },
@@ -48,6 +49,8 @@ Days must be exactly: Monday, Tuesday, Wednesday, Thursday, Friday.
 Each meal needs 8–12 ingredients and 5–7 method steps.
 calories should be an integer — estimated kcal per serving (1 serving = half the recipe).`;
 
+  const { weekId } = await request.json().catch(() => ({}));
+
   try {
     const message = await client.messages.create({
       model: "claude-opus-4-7",
@@ -56,9 +59,20 @@ calories should be an integer — estimated kcal per serving (1 serving = half t
     });
 
     const text = message.content[0].text.trim();
-    // Strip any markdown code fences if Claude wraps it
     const json = text.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     const data = JSON.parse(json);
+
+    // Persist to Supabase if we have a weekId
+    if (weekId && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      );
+      await supabase
+        .from("weeks")
+        .update({ meals: data.meals, week_of: data.weekOf })
+        .eq("id", weekId);
+    }
 
     return Response.json(data);
   } catch (err) {

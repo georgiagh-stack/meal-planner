@@ -139,19 +139,27 @@ function RecipeModal({ meal, checkedMap, onToggle, onClose }) {
   );
 }
 
-export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekOf }) {
-  const [meals, setMeals] = useState(initialMeals);
+export default function WeeklyMeals({ initialPlanningWeek, initialOrderedWeek, initialStaples }) {
+  const [planningWeek, setPlanningWeek] = useState(initialPlanningWeek);
+  const [orderedWeek, setOrderedWeek] = useState(initialOrderedWeek);
+  const [activeTab, setActiveTab] = useState("planning"); // "planning" | "ordered"
   const [staples] = useState(initialStaples);
-  const [weekOf, setWeekOf] = useState(initialWeekOf);
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [checkedIngredients, setCheckedIngredients] = useState({});
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenError, setRegenError] = useState(null);
+  const [isMarkingOrdered, setIsMarkingOrdered] = useState(false);
   const [shopItems, setShopItems] = useState(null);
   const [shopError, setShopError] = useState(null);
   const [shopChannel, setShopChannel] = useState(null);
 
   const { extras, loading: extrasLoading, configured: extrasConfigured, addExtra, removeExtra } = useExtras(staples);
+
+  // Which week is currently being viewed
+  const viewingWeek = activeTab === "ordered" && orderedWeek ? orderedWeek : planningWeek;
+  const meals = viewingWeek?.meals || [];
+  const weekOf = viewingWeek?.week_of || "";
+  const isOrdered = activeTab === "ordered";
 
   const toggleIngredient = (mealId, idx) => {
     setCheckedIngredients((prev) => ({
@@ -164,17 +172,42 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
     setIsRegenerating(true);
     setRegenError(null);
     try {
-      const res = await fetch("/api/regenerate", { method: "POST" });
+      const res = await fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekId: planningWeek?.id }),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unknown error");
-      setMeals(data.meals);
-      setWeekOf(data.weekOf);
+      setPlanningWeek((prev) => ({ ...prev, meals: data.meals, week_of: data.weekOf }));
       setCheckedIngredients({});
       setSelectedMeal(null);
     } catch (err) {
       setRegenError(err.message);
     } finally {
       setIsRegenerating(false);
+    }
+  };
+
+  const handleMarkOrdered = async () => {
+    if (!planningWeek?.id) return;
+    setIsMarkingOrdered(true);
+    try {
+      const res = await fetch("/api/weeks/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekId: planningWeek.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setOrderedWeek({ ...planningWeek, status: "ordered" });
+      setPlanningWeek(data.newWeek);
+      setActiveTab("ordered");
+      setShopItems(null);
+    } catch (err) {
+      console.error("Mark ordered failed:", err.message);
+    } finally {
+      setIsMarkingOrdered(false);
     }
   };
 
@@ -192,10 +225,8 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
       ...extras.map((e) => ({ text: e.text, status: "pending", section: "Staples" })),
     ];
 
-    // Show the panel immediately with all items pending
     setShopItems(allItems);
 
-    // Start the run on Railway via our API route
     let runId;
     try {
       const res = await fetch("/api/sainsburys/shop", {
@@ -212,7 +243,6 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
       return;
     }
 
-    // Subscribe to Supabase realtime for this run — items update live as the bot works
     if (!supabase) return;
     const channel = supabase
       .channel(`shop-run-${runId}`)
@@ -221,7 +251,6 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
         { event: "UPDATE", schema: "public", table: "shop_runs", filter: `id=eq.${runId}` },
         (payload) => {
           setShopItems(payload.new.items);
-          // If the run failed, mark any remaining pending items as errored
           if (payload.new.run_status === "failed") {
             setShopItems((prev) =>
               prev ? prev.map((item) =>
@@ -245,52 +274,106 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
     setShopError(null);
   };
 
+  const hasTabs = !!orderedWeek;
+
   return (
     <div className="min-h-screen bg-stone-50 pb-12">
       <header className="bg-emerald-800 text-white px-5 pt-10 pb-8">
         <div className="max-w-xl mx-auto">
+          {/* Week tabs */}
+          {hasTabs && (
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={() => setActiveTab("ordered")}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                  activeTab === "ordered"
+                    ? "bg-white text-emerald-800"
+                    : "bg-white/20 text-white hover:bg-white/30"
+                }`}
+              >
+                🍳 This week
+              </button>
+              <button
+                onClick={() => setActiveTab("planning")}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-full transition-colors ${
+                  activeTab === "planning"
+                    ? "bg-white text-emerald-800"
+                    : "bg-white/20 text-white hover:bg-white/30"
+                }`}
+              >
+                📋 Next week
+              </button>
+            </div>
+          )}
+
           <p className="text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-2">
-            Week of {weekOf}
+            {weekOf ? `Week of ${weekOf}` : "Next week"}
           </p>
-          <h1 className="text-3xl font-bold tracking-tight">This Week's Meals</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            {isOrdered ? "This Week's Meals" : "Next Week's Meals"}
+          </h1>
           <p className="text-emerald-300 mt-1.5 text-sm">
             High protein · Under 30 min · Serves 2 + leftovers
           </p>
 
-          <div className="flex flex-wrap gap-3 mt-6">
-            <button
-              onClick={handleRegenerate}
-              disabled={isRegenerating}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
-            >
-              <SparkleIcon />
-              {isRegenerating ? "Generating…" : "Regenerate meals"}
-            </button>
+          {isOrdered ? (
+            <div className="mt-5 inline-flex items-center gap-2 bg-emerald-700/50 text-emerald-200 text-xs font-semibold px-3 py-1.5 rounded-full">
+              <span>✓</span> Ordered — enjoy your week
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-3 mt-6">
+                <button
+                  onClick={handleRegenerate}
+                  disabled={isRegenerating}
+                  className="flex items-center gap-2 bg-white/15 hover:bg-white/25 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+                >
+                  <SparkleIcon />
+                  {isRegenerating ? "Generating…" : "Regenerate meals"}
+                </button>
 
-            <button
-              onClick={handleStartShop}
-              disabled={!!shopItems}
-              className="flex items-center gap-2 bg-white/15 hover:bg-white/25 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
-            >
-              <CartIcon />
-              Start Sainsbury's shop
-            </button>
-          </div>
+                {meals.length > 0 && (
+                  <button
+                    onClick={handleStartShop}
+                    disabled={!!shopItems}
+                    className="flex items-center gap-2 bg-white/15 hover:bg-white/25 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors"
+                  >
+                    <CartIcon />
+                    Start Sainsbury's shop
+                  </button>
+                )}
+              </div>
 
-          {regenError && (
-            <p className="mt-3 text-red-300 text-sm bg-red-900/30 rounded-lg px-3 py-2">
-              {regenError}
-            </p>
-          )}
-          {shopError && (
-            <p className="mt-3 text-red-300 text-sm bg-red-900/30 rounded-lg px-3 py-2">
-              {shopError}
-            </p>
+              {regenError && (
+                <p className="mt-3 text-red-300 text-sm bg-red-900/30 rounded-lg px-3 py-2">
+                  {regenError}
+                </p>
+              )}
+              {shopError && (
+                <p className="mt-3 text-red-300 text-sm bg-red-900/30 rounded-lg px-3 py-2">
+                  {shopError}
+                </p>
+              )}
+            </>
           )}
         </div>
       </header>
 
       <main className="max-w-xl mx-auto px-4 py-5 space-y-3">
+        {meals.length === 0 && !isOrdered && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-sm px-5 py-10 text-center">
+            <p className="text-stone-400 text-sm mb-4">No meals planned yet for next week</p>
+            <button
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            >
+              <SparkleIcon />
+              {isRegenerating ? "Generating…" : "Generate next week's meals"}
+            </button>
+          </div>
+        )}
+
         {meals.map((meal) => {
           const styles = DAY_STYLES[meal.day] || { badge: "bg-stone-100 text-stone-600" };
           return (
@@ -340,7 +423,12 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
       )}
 
       {shopItems && (
-        <ShopPanel items={shopItems} onDismiss={handleDismissShop} />
+        <ShopPanel
+          items={shopItems}
+          onDismiss={handleDismissShop}
+          onMarkOrdered={planningWeek?.id ? handleMarkOrdered : undefined}
+          isMarkingOrdered={isMarkingOrdered}
+        />
       )}
     </div>
   );

@@ -8,7 +8,7 @@ function Spinner() {
   );
 }
 
-export default function ShopPanel({ items, onDismiss }) {
+export default function ShopPanel({ items, onDismiss, onMarkOrdered, isMarkingOrdered }) {
   const shopItems = items.filter((i) => i.status !== "pantry");
   const pantryItems = items.filter((i) => i.status === "pantry");
   const processed = shopItems.filter((i) => i.status !== "pending");
@@ -125,11 +125,20 @@ export default function ShopPanel({ items, onDismiss }) {
                 </ul>
               </div>
             )}
+            {onMarkOrdered && (
+              <button
+                onClick={onMarkOrdered}
+                disabled={isMarkingOrdered}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm mb-3"
+              >
+                {isMarkingOrdered ? "Saving…" : "✓ Mark as ordered — freeze this week"}
+              </button>
+            )}
             <button
               onClick={onDismiss}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3.5 rounded-xl transition-colors text-sm"
+              className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-semibold py-3.5 rounded-xl transition-colors text-sm"
             >
-              Done
+              Dismiss
             </button>
           </div>
         )}
