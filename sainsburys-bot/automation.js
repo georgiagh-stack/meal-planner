@@ -3,7 +3,7 @@
 // are the only things you need to change. Each uses text/role selectors which
 // are more resilient than CSS class names.
 
-const GROCERIES_URL = "https://groceries.sainsburys.co.uk";
+const GROCERIES_URL = "https://www.sainsburys.co.uk";
 const SIGNIN_URL = "https://account.sainsburys.co.uk/signin";
 
 // Strip leading quantities so "200g jasmine rice" → "jasmine rice" for search
@@ -38,15 +38,47 @@ async function isLoggedIn(page) {
   }
 }
 
+async function gotoWithRetry(page, url, options = {}, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000, ...options });
+      return;
+    } catch (err) {
+      if (i === retries - 1) throw err;
+      console.log(`Navigation to ${url} failed (attempt ${i + 1}), retrying...`);
+      await page.waitForTimeout(3000);
+    }
+  }
+}
+
 async function loginToSainsburys(page, email, password) {
-  await page.goto(GROCERIES_URL, { waitUntil: "domcontentloaded", timeout: 20000 });
+  await gotoWithRetry(page, GROCERIES_URL);
   await acceptCookies(page);
 
   if (await isLoggedIn(page)) return;
 
-  // Navigate to sign-in page
-  await page.goto(SIGNIN_URL, { waitUntil: "domcontentloaded", timeout: 20000 });
-  await page.waitForTimeout(1000);
+  // Click the sign-in link on the homepage rather than hardcoding a URL
+  try {
+    await page.click(
+      'a[href*="signin"], a[href*="login"], a[href*="userLogin"], a:has-text("Sign in"), a:has-text("Log in")',
+      { timeout: 8000 }
+    );
+  } catch {
+    // Fallback: try direct URL patterns
+    for (const url of [
+      `${GROCERIES_URL}/gol-ui/userLoginView`,
+      `${GROCERIES_URL}/signin`,
+      SIGNIN_URL,
+    ]) {
+      try {
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+        const hasForm = await page.locator('input[type="email"], input[type="password"]').count();
+        if (hasForm > 0) break;
+      } catch { /* try next */ }
+    }
+  }
+
+  await page.waitForTimeout(1500);
 
   // Email step
   await page.fill('input[type="email"], input[name="email"], input[id*="email"]', email);
@@ -65,13 +97,7 @@ async function loginToSainsburys(page, email, password) {
   await page.waitForTimeout(300);
   await page.click('button[type="submit"], button:has-text("Sign in"), button:has-text("Log in")');
 
-  // Wait until we're back on the groceries domain
-  try {
-    await page.waitForURL(`**${GROCERIES_URL}**`, { timeout: 15000 });
-  } catch {
-    await page.waitForLoadState("networkidle", { timeout: 15000 });
-  }
-
+  await page.waitForLoadState("networkidle", { timeout: 20000 });
   await acceptCookies(page);
 }
 
@@ -79,16 +105,18 @@ async function addItemToTrolley(page, itemText) {
   const term = cleanSearchTerm(itemText);
 
   try {
-    await page.goto(
-      `${GROCERIES_URL}/search?query=${encodeURIComponent(term)}`,
-      { waitUntil: "domcontentloaded", timeout: 20000 }
-    );
+    await gotoWithRetry(page, `${GROCERIES_URL}/gol-ui/SearchResults/${encodeURIComponent(term)}`);
     await page.waitForTimeout(800);
 
-    // Try to find the first "Add to trolley" button on the page
-    const addBtn = page.locator(
-      'button:has-text("Add to trolley"), button[aria-label*="Add to trolley"], [data-test-id*="add-to-trolley"]'
-    ).first();
+    const landedUrl = page.url();
+    const pageTitle = await page.title();
+    console.log(`  [debug] searched "${term}" → ${landedUrl} | title: ${pageTitle}`);
+
+    // Wait a bit longer for the React page to finish rendering products
+    await page.waitForTimeout(1200);
+
+    // Button text is just "Add" on the current Sainsbury's site
+    const addBtn = page.locator('button:text-is("Add")').first();
 
     if ((await addBtn.count()) === 0) {
       return { success: false, error: "Not found" };

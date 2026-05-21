@@ -1,11 +1,11 @@
-# Uses the official Playwright image which has Chromium pre-installed.
-# If you need to update Playwright, change the version tag here and in package.json.
-FROM mcr.microsoft.com/playwright:v1.48.2-jammy
+FROM node:20-slim
 
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+RUN npx playwright install chromium --with-deps
 COPY . .
 
+RUN chmod +x entrypoint.sh
 EXPOSE 3002
-CMD ["node", "server.js"]
+CMD ["./entrypoint.sh"]

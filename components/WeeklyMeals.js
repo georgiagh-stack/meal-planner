@@ -150,7 +150,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
   const [shopError, setShopError] = useState(null);
   const [shopChannel, setShopChannel] = useState(null);
 
-  const { extras, loading: extrasLoading, configured: extrasConfigured, addExtra, removeExtra } = useExtras();
+  const { extras, loading: extrasLoading, configured: extrasConfigured, addExtra, removeExtra } = useExtras(staples);
 
   const toggleIngredient = (mealId, idx) => {
     setCheckedIngredients((prev) => ({
@@ -184,8 +184,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
       ...meals.flatMap((m) =>
         m.ingredients.map((ing) => ({ text: ing, status: "pending", section: m.day }))
       ),
-      ...staples.map((s) => ({ text: s, status: "pending", section: "Staples" })),
-      ...extras.map((e) => ({ text: e.text, status: "pending", section: "Extras" })),
+      ...extras.map((e) => ({ text: e.text, status: "pending", section: "Staples" })),
     ];
 
     // Show the panel immediately with all items pending
@@ -315,20 +314,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
           );
         })}
 
-        {/* Weekly staples */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4">
-          <h2 className="font-semibold text-amber-900 text-sm mb-3">🛒 Weekly staples</h2>
-          <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-            {staples.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 text-amber-800 text-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                {item}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Collaborative extras */}
+        {/* Weekly staples — editable, backed by Supabase */}
         <WeeklyExtras
           extras={extras}
           loading={extrasLoading}

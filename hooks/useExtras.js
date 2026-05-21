@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 
-export function useExtras() {
+export function useExtras(defaultItems = []) {
   const [extras, setExtras] = useState([]);
   const [loading, setLoading] = useState(true);
   const configured = !!supabase;
@@ -18,7 +18,20 @@ export function useExtras() {
       .select("*")
       .order("created_at", { ascending: true })
       .then(({ data }) => {
-        if (data) setExtras(data);
+        if (data) {
+          // Seed with defaults the very first time the table is empty
+          if (data.length === 0 && defaultItems.length > 0) {
+            supabase
+              .from("extras")
+              .insert(defaultItems.map((text) => ({ text })))
+              .select()
+              .then(({ data: seeded }) => {
+                if (seeded) setExtras(seeded);
+              });
+          } else {
+            setExtras(data);
+          }
+        }
         setLoading(false);
       });
 

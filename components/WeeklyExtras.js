@@ -35,7 +35,7 @@ export default function WeeklyExtras({ extras, loading, configured, onAdd, onRem
   if (!configured) {
     return (
       <div className="bg-stone-50 border border-stone-200 rounded-2xl px-5 py-4">
-        <h2 className="font-semibold text-stone-400 text-sm mb-1">This week's extras</h2>
+        <h2 className="font-semibold text-stone-400 text-sm mb-1">Weekly staples</h2>
         <p className="text-stone-400 text-xs leading-relaxed">
           Add your Supabase credentials to enable the shared real-time extras list.
         </p>
@@ -46,7 +46,7 @@ export default function WeeklyExtras({ extras, loading, configured, onAdd, onRem
   return (
     <div className="bg-white border border-stone-200 rounded-2xl px-5 py-4 shadow-sm">
       <div className="flex items-center gap-2 mb-3">
-        <h2 className="font-semibold text-stone-900 text-sm">This week's extras</h2>
+        <h2 className="font-semibold text-stone-900 text-sm">Weekly staples</h2>
         <span className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           live
@@ -74,7 +74,7 @@ export default function WeeklyExtras({ extras, loading, configured, onAdd, onRem
       {loading ? (
         <p className="text-stone-400 text-sm">Loading…</p>
       ) : extras.length === 0 ? (
-        <p className="text-stone-400 text-sm italic">Nothing added yet — type above to add</p>
+        <p className="text-stone-400 text-sm italic">Nothing here yet — add your weekly staples above</p>
       ) : (
         <ul className="space-y-2">
           {extras.map((item) => (

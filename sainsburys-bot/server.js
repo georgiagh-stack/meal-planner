@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
+const https = require("https");
 const { createClient } = require("@supabase/supabase-js");
+const ws = require("ws");
 const { chromium } = require("playwright");
 const { loginToSainsburys, addItemToTrolley } = require("./automation");
 
@@ -8,10 +10,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-);
+const { SUPABASE_URL, SUPABASE_ANON_KEY } = process.env;
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error("ERROR: SUPABASE_URL and SUPABASE_ANON_KEY must be set as environment variables");
+  process.exit(1);
+}
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  realtime: { transport: ws },
+});
 
 // Reject requests that don't carry the shared secret
 function requireSecret(req, res, next) {
@@ -23,6 +29,48 @@ function requireSecret(req, res, next) {
 }
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Resolve a hostname to an IP via Google's DoH JSON API, connecting by IP so
+// we never touch the broken system DNS resolver inside Railway's container.
+// Follows CNAME chains automatically (groceries.sainsburys.co.uk uses Akamai).
+function resolveViaDoH(hostname, depth = 0) {
+  if (depth > 5) return Promise.reject(new Error("CNAME chain too deep"));
+  return new Promise((resolve, reject) => {
+    const path = `/resolve?name=${encodeURIComponent(hostname)}&type=A`;
+    const req = https.get(
+      { hostname: "8.8.8.8", path, headers: { Host: "dns.google" } },
+      (res) => {
+        let raw = "";
+        res.on("data", (c) => (raw += c));
+        res.on("end", () => {
+          try {
+            const json = JSON.parse(raw);
+            const answers = json.Answer || [];
+            const aRecord = answers.find((r) => r.type === 1);
+            if (aRecord) {
+              resolve(aRecord.data);
+              return;
+            }
+            // Follow CNAME chain if present
+            const cnames = answers.filter((r) => r.type === 5);
+            if (cnames.length > 0) {
+              const target = cnames[cnames.length - 1].data.replace(/\.$/, "");
+              console.log(`DoH following CNAME ${hostname} → ${target}`);
+              resolveViaDoH(target, depth + 1).then(resolve).catch(reject);
+            } else {
+              console.warn(`DoH no A record for ${hostname}, status=${json.Status}, answers=${JSON.stringify(answers).slice(0, 200)}`);
+              reject(new Error(`No A record for ${hostname}`));
+            }
+          } catch (e) {
+            reject(e);
+          }
+        });
+      }
+    );
+    req.setTimeout(8000, () => { req.destroy(); reject(new Error("DoH timeout")); });
+    req.on("error", reject);
+  });
+}
 
 // POST /shop
 // Body: { items: [{ text, status, section }] }
@@ -56,12 +104,32 @@ async function processRun(runId, items) {
   let browser;
 
   try {
+    // Pre-resolve sainsburys hostnames via DoH (connecting to 8.8.8.8 by IP so
+    // we never touch Railway's broken system DNS resolver).
+    const hostsToResolve = [
+      "groceries.sainsburys.co.uk",
+      "account.sainsburys.co.uk",
+    ];
+    const resolverRules = [];
+    for (const host of hostsToResolve) {
+      try {
+        const ip = await resolveViaDoH(host);
+        resolverRules.push(`MAP ${host} ${ip}`);
+        console.log(`DoH resolved ${host} → ${ip}`);
+      } catch (err) {
+        console.warn(`DoH failed for ${host}: ${err.message}`);
+      }
+    }
+
     browser = await chromium.launch({
       headless: true,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--disable-blink-features=AutomationControlled",
+        ...(resolverRules.length > 0
+          ? [`--host-resolver-rules=${resolverRules.join(", ")}`]
+          : []),
       ],
     });
 
