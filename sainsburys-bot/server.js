@@ -13,12 +13,21 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
+// Reject requests that don't carry the shared secret
+function requireSecret(req, res, next) {
+  const secret = process.env.BOT_SECRET;
+  if (secret && req.headers["x-bot-secret"] !== secret) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
+
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 // POST /shop
 // Body: { items: [{ text, status, section }] }
 // Returns: { runId } immediately — processing continues in background
-app.post("/shop", async (req, res) => {
+app.post("/shop", requireSecret, async (req, res) => {
   const { items } = req.body;
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "items array required" });

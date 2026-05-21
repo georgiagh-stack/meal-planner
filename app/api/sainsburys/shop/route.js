@@ -13,7 +13,10 @@ export async function POST(request) {
   try {
     const res = await fetch(`${botUrl}/shop`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.BOT_SECRET && { "x-bot-secret": process.env.BOT_SECRET }),
+      },
       body: JSON.stringify(body),
     });
 
