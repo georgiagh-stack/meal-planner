@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useExtras } from "@/hooks/useExtras";
 import ShopPanel from "@/components/ShopPanel";
 import WeeklyExtras from "@/components/WeeklyExtras";
+import { supabase } from "@/lib/supabase";
 
 const DAY_STYLES = {
   Monday:    { badge: "bg-sky-100 text-sky-700" },
@@ -146,6 +147,8 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [regenError, setRegenError] = useState(null);
   const [shopItems, setShopItems] = useState(null);
+  const [shopError, setShopError] = useState(null);
+  const [shopChannel, setShopChannel] = useState(null);
 
   const { extras, loading: extrasLoading, configured: extrasConfigured, addExtra, removeExtra } = useExtras();
 
@@ -175,6 +178,8 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
   };
 
   const handleStartShop = async () => {
+    setShopError(null);
+
     const allItems = [
       ...meals.flatMap((m) =>
         m.ingredients.map((ing) => ({ text: ing, status: "pending", section: m.day }))
@@ -183,17 +188,49 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
       ...extras.map((e) => ({ text: e.text, status: "pending", section: "Extras" })),
     ];
 
+    // Show the panel immediately with all items pending
     setShopItems(allItems);
 
-    for (let i = 0; i < allItems.length; i++) {
-      const result = await addItemToSainsburys(allItems[i].text);
-      setShopItems((prev) => {
-        if (!prev) return null;
-        return prev.map((item, idx) =>
-          idx === i ? { ...item, status: result.success ? "success" : "error" } : item
-        );
+    // Start the run on Railway via our API route
+    let runId;
+    try {
+      const res = await fetch("/api/sainsburys/shop", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: allItems }),
       });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "Failed to start shop");
+      runId = data.runId;
+    } catch (err) {
+      setShopItems(null);
+      setShopError(err.message);
+      return;
     }
+
+    // Subscribe to Supabase realtime for this run — items update live as the bot works
+    if (!supabase) return;
+    const channel = supabase
+      .channel(`shop-run-${runId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "shop_runs", filter: `id=eq.${runId}` },
+        (payload) => {
+          setShopItems(payload.new.items);
+        }
+      )
+      .subscribe();
+
+    setShopChannel(channel);
+  };
+
+  const handleDismissShop = () => {
+    if (shopChannel && supabase) {
+      supabase.removeChannel(shopChannel);
+      setShopChannel(null);
+    }
+    setShopItems(null);
+    setShopError(null);
   };
 
   return (
@@ -231,6 +268,11 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
           {regenError && (
             <p className="mt-3 text-red-300 text-sm bg-red-900/30 rounded-lg px-3 py-2">
               {regenError}
+            </p>
+          )}
+          {shopError && (
+            <p className="mt-3 text-red-300 text-sm bg-red-900/30 rounded-lg px-3 py-2">
+              {shopError}
             </p>
           )}
         </div>
@@ -298,7 +340,7 @@ export default function WeeklyMeals({ initialMeals, initialStaples, initialWeekO
       )}
 
       {shopItems && (
-        <ShopPanel items={shopItems} onDismiss={() => setShopItems(null)} />
+        <ShopPanel items={shopItems} onDismiss={handleDismissShop} />
       )}
     </div>
   );
